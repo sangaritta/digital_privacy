@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:async'; // For StreamSubscription
+import 'dart:async'; // For StreamSubscription and Timer
 // import 'package:firebase_auth/firebase_auth.dart'; // Uncomment for logout
 
 class AdminScreen extends StatefulWidget {
@@ -13,18 +13,37 @@ class AdminScreen extends StatefulWidget {
 }
 
 class _AdminScreenState extends State<AdminScreen> {
-  final DatabaseReference _sessionRef = FirebaseDatabase.instance.ref('sessions');
+  final DatabaseReference _sessionRef = FirebaseDatabase.instance.ref("sessions");
   Map<String, String> _connectedStudents = {};
   int _currentStep = 0;
   StreamSubscription? _studentListener;
   StreamSubscription? _stepListener;
   bool _isLoading = true;
-  bool _sessionExists = true; // Assume session exists until checked
+  bool _sessionExists = true;
 
-  // Define the total number of steps in your presentation (0-based index)
-  // This MUST match the steps defined in StudentScreen._buildStepContent
-  // UPDATED: Changed from 5 to 10 based on new content
-  static const int _totalSteps = 10; 
+  // --- Timer State ---
+  Timer? _presentationTimer;
+  Duration _elapsedTime = Duration.zero;
+  bool _isTimerRunning = false;
+
+  // --- Dialogue State (No internal quotes or apostrophes) ---
+  final Map<int, String> _dialogueMap = {
+    0: "(Start Intro Music - Low Volume)Good morning. How many of you used your phone before you even got out of bed today? Checked social media? Maybe the news? We live incredible digital lives, connected like never before. But have you ever stopped to think... what is the price of that connection?",
+    1: "(Step 1: Consent Fatigue)On your screens now, you will see the term Consent Fatigue. We are constantly bombarded - Accept Cookies, Agree to Terms - Gurses & Del Alamo called it fatigue (2016). We click yes without reading, overwhelmed. But what are we agreeing to?",
+    2: "(Step 2: Guided Interaction)The reality is, our clicks, our scrolls, our *lives* online are being turned into profit. It is called Surveillance Capitalism, a term coined by Shoshana Zuboff (2019). My app here is not just showing you text; it is designed to guide you interactively... Social media platforms, device makers, even our internet providers - they are all players in a global data market worth over \$300 Billion *this year*. Lets see a glimpse... (Play Clip 1: The Great Hack)",
+    3: "(After Clip 1)Scary, right? That was from The Great Hack, showing the Cambridge Analytica scandal. Billions of data points, harvested, analyzed, and used to influence behaviour. Meta alone makes over \$130 billion a year from ads targeted using *your* data (Tang & Wang, 2018).",
+    4: "(Step 3/4: Rhetoric/Stories/Questions)So, how do we make sense of something so vast and often invisible? We use rhetoric. We use stories, questions. Think about it: Would you let a stranger follow you all day, noting every shop you visit...? That sounds absurd, right? But that is essentially what happens online.",
+    5: "(Step 5: Metaphors/Slogans)We use metaphors - like data collection being those digital footprints you leave behind. It makes the abstract tangible. And the device in your pocket? It is a powerful sensor. Apple and Google have different approaches... lawsuits show even they collect more than we think. Your phone generates gigs of data daily - location, messages, health insights! Apps often ask for permissions they do not *need* - 43% access mics/cameras unnecessarily (Petryk et al., 2023).",
+    6: "(ISP Section)Even your Internet Service Provider - Comcast, AT&T - sees your traffic. Since privacy rules were rolled back, they can legally monitor your browsing... and sell that data (Feld, 2017). Some even offer *discounts* if you let them watch everything you do. Is that really a choice? Privacy becomes a luxury.",
+    7: "(Step 6: Quiz Intro / Taking Control - Start Empowerment Music)Okay, that was heavy. But the goal is not to scare you into logging off forever. It is to empower you. This app includes a quiz later to help reflect. But knowledge is only powerful when applied. There ARE things you can do. (Play Clip 2: Privacy 101)",
+    8: "(After Clip 2 / VPNs - Step 8 Data Viz)As Naomi Brockwell shows... use privacy-focused browsers... secure messaging apps... Consider a VPN. VPN use is up over 400% since 2019! But be careful - Consumer Reports found many *free* VPNs are insecure. Choose reputable, paid services.",
+    9: "(Step 7: Visual Design / Humor)Sometimes, the biggest risks are not giant corporations, but simple mistakes. We reuse passwords, click dodgy links... It can even be funny... (Play Clip 3: TeachPrivacy Funny Fail). Okay, maybe only funny in retrospect. But IBM reported 82% of data breaches involve human error. Being mindful is key.",
+    10: "(Step 9: Conclusion - Thoughtful Music)So, why does all this matter? Digital privacy is not about hiding secrets. As Helen Nissenbaum argues, it is about contextual integrity... It is about autonomy... fundamental to a democratic society. We need change at a higher level... But change also starts with us... Use the tools available... Review permissions... Question defaults... Demand better... This app is a starting point. Explore it, reflect... Lets move from consent fatigue to conscious control. Thank you.",
+    11: "(Quiz results are being displayed.)",
+  };
+
+  // Total steps = 10 content steps (0-9) + 1 quiz step (10)
+  static const int _totalSteps = 11;
 
   @override
   void initState() {
@@ -32,34 +51,61 @@ class _AdminScreenState extends State<AdminScreen> {
     _checkSessionExistsAndListen();
   }
 
-  // Checks if the session exists before starting listeners
+  // --- Timer Methods ---
+  void _startTimer() {
+    if (_isTimerRunning) return;
+    _presentationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _elapsedTime = _elapsedTime + const Duration(seconds: 1);
+        });
+      }
+    });
+    setState(() {
+      _isTimerRunning = true;
+    });
+  }
+
+  void _stopTimer() {
+    if (!_isTimerRunning) return;
+    _presentationTimer?.cancel();
+    setState(() {
+      _isTimerRunning = false;
+    });
+  }
+
+  void _resetTimer() {
+    _presentationTimer?.cancel();
+    setState(() {
+      _elapsedTime = Duration.zero;
+      _isTimerRunning = false;
+    });
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    final hours = twoDigits(duration.inHours);
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$hours:$minutes:$seconds";
+  }
+  // --- End Timer Methods ---
+
   Future<void> _checkSessionExistsAndListen() async {
     try {
       final snapshot = await _sessionRef.child(widget.sessionId).get();
       if (!snapshot.exists) {
-        if (mounted) {
-          setState(() {
-            _sessionExists = false;
-            _isLoading = false;
-          });
-        }
+        if (mounted) setState(() { _sessionExists = false; _isLoading = false; });
         return;
       }
-      // Session exists, proceed to listen
       if (mounted) {
-         setState(() { _isLoading = false; }); // Stop loading indicator
-       _listenForStudents();
-       _listenForCurrentStep();
+         setState(() { _isLoading = false; });
+         _listenForStudents();
+         _listenForCurrentStep();
       }
     } catch (e) {
       print("Error checking session existence: $e");
-      if (mounted) {
-        setState(() {
-          _sessionExists = false; // Treat error as session not accessible
-          _isLoading = false;
-          // Consider showing an error message specific to the failure
-        });
-      }
+      if (mounted) setState(() { _sessionExists = false; _isLoading = false; });
     }
   }
 
@@ -67,209 +113,161 @@ class _AdminScreenState extends State<AdminScreen> {
   void dispose() {
     _studentListener?.cancel();
     _stepListener?.cancel();
+    _presentationTimer?.cancel();
     super.dispose();
   }
 
   void _listenForStudents() {
-    final studentRef = _sessionRef.child(widget.sessionId).child('students');
+    final studentRef = _sessionRef.child(widget.sessionId).child("students");
     _studentListener = studentRef.onValue.listen((DatabaseEvent event) {
       final data = event.snapshot.value;
       final Map<String, String> updatedStudents = {};
       if (data != null && data is Map) {
-        // Iterate through student entries
         data.forEach((key, value) {
-          // Check if the student entry is valid and if they are marked as online
-          if (value is Map && value.containsKey('nickname') && value.containsKey('isOnline') && value['isOnline'] == true) {
-            updatedStudents[key.toString()] = value['nickname'].toString();
+          if (value is Map && value.containsKey("nickname") && value.containsKey("isOnline") && value["isOnline"] == true) {
+            updatedStudents[key.toString()] = value["nickname"].toString();
           }
         });
       }
-      // Update the state only if the widget is still mounted
-      if (mounted) {
-        setState(() {
-          _connectedStudents = updatedStudents;
-        });
-      }
+      if (mounted) setState(() => _connectedStudents = updatedStudents);
     }, onError: (error) {
       print("Error listening to students: $error");
-      // Optional: Handle error, e.g., clear students list or show a message
-      if (mounted) {
-         setState(() => _connectedStudents = {}); // Clear list on error
-       }
+      if (mounted) setState(() => _connectedStudents = {});
     });
   }
 
   void _listenForCurrentStep() {
-    final stepRef = _sessionRef.child(widget.sessionId).child('currentStep');
+    final stepRef = _sessionRef.child(widget.sessionId).child("currentStep");
     _stepListener = stepRef.onValue.listen((DatabaseEvent event) {
       final step = event.snapshot.value;
-      // Update the state if the widget is mounted and the step value is valid
       if (mounted && step is int) {
-        setState(() {
-          _currentStep = step;
-        });
+        setState(() => _currentStep = step);
       }
     }, onError: (error) {
       print("Error listening to current step: $error");
-      // Optional: Handle error, maybe show a message to the admin
     });
   }
 
-  // Function to update the current step in Firebase
   Future<void> _navigateStep(int delta) async {
-    // Calculate the new step, clamping it within the valid range [0, totalSteps - 1]
-    final newStep = (_currentStep + delta).clamp(0, _totalSteps - 1); 
-
-    // Only update Firebase if the step has actually changed
+    final newStep = (_currentStep + delta).clamp(0, _totalSteps - 1);
     if (newStep != _currentStep) {
       try {
-        await _sessionRef.child(widget.sessionId).child('currentStep').set(newStep);
-        // The state will update automatically via the _stepListener
+        await _sessionRef.child(widget.sessionId).child("currentStep").set(newStep);
       } catch (e) {
         print("Error updating step: $e");
-        // Show a snackbar or other feedback if the update fails
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to change step: ${e.toString()}')),
+            SnackBar(content: Text("Failed to change step: ${e.toString()}")),
           );
         }
       }
     }
   }
 
-  // --- Logout Functionality ---
   Future<void> _logout() async {
-    // --- !!! Implement Real Firebase Logout Here !!! ---
-    /*
-    try {
-      await FirebaseAuth.instance.signOut();
-      // Navigate back to the login or initial screen after logout
-      if (mounted) {
-        context.go('/'); // Go back to mode selection
-        // Or context.go('/admin'); // Go back to admin login
-      }
-    } catch (e) {
-      print("Error logging out: $e");
-      // Optionally show an error message
-      if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text('Logout failed: ${e.toString()}')),
-         );
-      }
-    }
-    */
-
-    // --- Temporary Logout Simulation ---
-    print("Simulating logout...");
-    if (mounted) {
-      context.go('/'); // Navigate back to the initial mode selection screen
-    }
-    // --- End Temporary Logout ---
+     _presentationTimer?.cancel();
+     if (mounted) context.go("/");
   }
 
   @override
   Widget build(BuildContext context) {
-    // Show loading indicator while checking session status
     if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(title: Text('Admin - Session: ${widget.sessionId}')),
-        body: const Center(child: CircularProgressIndicator()),
-      );
+      return Scaffold(appBar: AppBar(title: Text("Admin - Loading...")), body: const Center(child: CircularProgressIndicator()));
     }
-
-    // Show error message if the session doesn't exist or couldn't be accessed
     if (!_sessionExists) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Error')),
-        body: Padding(
-           padding: const EdgeInsets.all(20.0),
-           child: Center(
-            child: Column(
-               mainAxisAlignment: MainAxisAlignment.center,
-               children: [
-                 const Icon(Icons.error_outline, size: 50, color: Colors.redAccent),
-                 const SizedBox(height: 15),
-                 const Text(
-                   'Session Not Found',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                 ),
-                 const SizedBox(height: 10),
-                 Text(
-                   'Session ID "${widget.sessionId}" does not exist or could not be loaded. Please check the ID and try again.',
-                    textAlign: TextAlign.center,
-                 ),
-                 const SizedBox(height: 20),
-                 ElevatedButton(
-                    onPressed: () => context.go('/'), // Go back to start
-                    child: const Text('Go Back'),
-                 )
-               ],
-            ),
-           ),
-        ),
-      );
+      return Scaffold(appBar: AppBar(title: const Text("Error")), body: Center(child: Text("Session ${widget.sessionId} not found.")));
     }
 
-    // --- Main Admin UI (if session exists) ---
+    final currentDialogue = _dialogueMap[_currentStep] ?? "(No dialogue for this step)";
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Admin - Session: ${widget.sessionId}'),
+        title: Text("Admin - Session: ${widget.sessionId}"),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-            onPressed: _logout, // Call the logout function
-          ),
+          IconButton(icon: const Icon(Icons.logout), tooltip: "Logout", onPressed: _logout),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(16.0),
+        child: ListView(
           children: <Widget>[
+            // --- Timer Card ---
+            Card(
+              elevation: 3,
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  children: [
+                    Text(
+                      "Presentation Timer",
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _formatDuration(_elapsedTime),
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: "monospace",
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        IconButton.filledTonal(
+                          icon: Icon(_isTimerRunning ? Icons.pause : Icons.play_arrow),
+                          tooltip: _isTimerRunning ? "Pause Timer" : "Start Timer",
+                          onPressed: _isTimerRunning ? _stopTimer : _startTimer,
+                          iconSize: 28,
+                        ),
+                        IconButton.filledTonal(
+                          icon: const Icon(Icons.stop),
+                          tooltip: "Stop & Reset Timer",
+                          onPressed: _resetTimer,
+                          iconSize: 28,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // --- Presentation Controls Card ---
             Card(
-              elevation: 4, // Add some shadow
+              elevation: 3,
               child: Padding(
                 padding: const EdgeInsets.all(15.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Presentation Control',
+                      "Presentation Control",
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 15),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: <Widget>[
-                        // Previous Step Button
                         IconButton.filledTonal(
                           icon: const Icon(Icons.arrow_back_ios_new),
-                          tooltip: 'Previous Step',
-                          // Disable if already at the first step (0)
+                          tooltip: "Previous Step",
                           onPressed: _currentStep == 0 ? null : () => _navigateStep(-1),
                           iconSize: 30,
                         ),
-                        // Current Step Display
                         Column(
                           children: [
+                            const Text("Step"),
                             Text(
-                              'Step', // Label for the step number
-                              style: Theme.of(context).textTheme.labelMedium,
-                            ),
-                            Text(
-                              '${_currentStep + 1}', // Display 1-based step number
+                              "${_currentStep + 1}${_currentStep == 10 ? ' (Quiz)' : ' of $_totalSteps'}",
                               style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
-                        // Next Step Button
                         IconButton.filledTonal(
                           icon: const Icon(Icons.arrow_forward_ios),
-                          tooltip: 'Next Step',
-                           // Disable if already at the last step
+                          tooltip: "Next Step",
                            onPressed: _currentStep >= _totalSteps - 1 ? null : () => _navigateStep(1),
                           iconSize: 30,
                         ),
@@ -279,42 +277,56 @@ class _AdminScreenState extends State<AdminScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
+
+            // --- Dialogue Card ---
+            Card(
+              elevation: 3,
+              child: Padding(
+                padding: const EdgeInsets.all(15.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Presenter Notes (Step ${_currentStep + 1})",
+                       style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 10),
+                    SelectableText(
+                      currentDialogue,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.4),
+                      textAlign: TextAlign.left,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // --- Connected Students Section ---
             Text(
-              'Connected Students (${_connectedStudents.length}):',
+              "Connected Students (${_connectedStudents.length}):",
               style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            Expanded(
-              child: _connectedStudents.isEmpty
-                  // Display a message if no students are connected
-                  ? const Card(
-                      child: Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(20.0),
-                          child: Text('No students connected yet.'),
-                        ),
-                      ),
-                    )
-                  // Display the list of connected students in a Card
-                  : Card(
-                      elevation: 2,
-                      child: ListView.builder(
-                        itemCount: _connectedStudents.length,
-                        itemBuilder: (context, index) {
-                          final nickname = _connectedStudents.values.elementAt(index);
-                          // final studentId = _connectedStudents.keys.elementAt(index); // For debugging
-                          return ListTile(
-                            leading: const Icon(Icons.person_outline),
-                            title: Text(nickname),
-                            // subtitle: Text(studentId), // Optional: Show student ID
-                            dense: true, // Make list items more compact
-                          );
-                        },
-                      ),
-                    ),
-            ),
+            _connectedStudents.isEmpty
+              ? const Card(child: Center(child: Padding(padding: EdgeInsets.all(20.0), child: Text("No students connected yet."))))
+              : Card(
+                  elevation: 2,
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _connectedStudents.length,
+                    itemBuilder: (context, index) {
+                      final nickname = _connectedStudents.values.elementAt(index);
+                      return ListTile(
+                        leading: const Icon(Icons.person_outline),
+                        title: Text(nickname),
+                        dense: true,
+                      );
+                    },
+                  ),
+                ),
           ],
         ),
       ),

@@ -6,6 +6,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth for auth checks
 import 'dart:math' as math; // For session ID generation
 import 'package:flutter/foundation.dart'; // For kDebugMode
+import 'package:url_launcher/url_launcher.dart'; // Import url_launcher
 
 // Import Firebase options
 import 'firebase_options.dart';
@@ -185,62 +186,157 @@ class ModeSelectionScreen extends StatelessWidget {
         title: const Text('Select Mode'),
         centerTitle: true,
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch, // Make buttons stretch
-            children: <Widget>[
-              ElevatedButton.icon(
-                icon: const Icon(Icons.monitor),
-                label: const Text('Projector Mode'),
-                onPressed: () {
-                  final sessionId = _generateSessionId();
-                  FirebaseDatabase.instance.ref('sessions').child(sessionId).set({
-                    'createdAt': ServerValue.timestamp,
-                    'currentStep': 0,
-                    'students': {},
-                  }).then((_) {
-                    // Use context only if widget is still mounted after async gap
-                    if (context.mounted) {
-                      context.go('/projector/$sessionId');
-                    }
-                  }).catchError((error) {
-                    if (kDebugMode) {
-                      print("Error creating session: $error");
-                    }
-                    // Use context only if widget is still mounted after async gap
-                    if (context.mounted) {
-                       ScaffoldMessenger.of(context).showSnackBar(
-                         const SnackBar(content: Text('Error creating session. Please try again.')),
-                       );
-                    }
-                  });
-                },
-                 style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15)),
+      body: Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch, // Make buttons stretch
+                  children: <Widget>[
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.monitor),
+                      label: const Text('Projector Mode'),
+                      onPressed: () {
+                        final sessionId = _generateSessionId();
+                        FirebaseDatabase.instance.ref('sessions').child(sessionId).set({
+                          'createdAt': ServerValue.timestamp,
+                          'currentStep': 0,
+                          'students': {},
+                        }).then((_) {
+                          // Use context only if widget is still mounted after async gap
+                          if (context.mounted) {
+                            context.go('/projector/$sessionId');
+                          }
+                        }).catchError((error) {
+                          if (kDebugMode) {
+                            print("Error creating session: $error");
+                          }
+                          // Use context only if widget is still mounted after async gap
+                          if (context.mounted) {
+                             ScaffoldMessenger.of(context).showSnackBar(
+                               const SnackBar(content: Text('Error creating session. Please try again.')),
+                             );
+                          }
+                        });
+                      },
+                       style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15)),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.school),
+                      label: const Text('Student Mode'),
+                      onPressed: () {
+                        context.go('/student/join');
+                      },
+                       style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15)),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.admin_panel_settings),
+                      label: const Text('Admin Mode'),
+                      onPressed: () {
+                        context.go('/admin');
+                      },
+                       style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15)),
+                    ),
+                    const SizedBox(height: 40),
+                  ],
+                ),
               ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.school),
-                label: const Text('Student Mode'),
-                onPressed: () {
-                  context.go('/student/join');
-                },
-                 style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15)),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.admin_panel_settings),
-                label: const Text('Admin Mode'),
-                onPressed: () {
-                  context.go('/admin');
-                },
-                 style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15)),
-              ),
-            ],
+            ),
           ),
-        ),
+          // --- Project Info Footer ---
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 18, top: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey[900]?.withOpacity(0.92),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/images/ttu.png',
+                        height: 38,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(width: 12),
+                      const Text('🇨🇷', style: TextStyle(fontSize: 32)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Proudly Open Source',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    onTap: () async {
+                      final url = Uri.parse('https://github.com/sangaritta/digital_privacy');
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    child: Text(
+                      'github.com/sangaritta/digital_privacy',
+                      style: TextStyle(
+                        color: Colors.blue.shade200,
+                        decoration: TextDecoration.underline,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'A project by Texas Tech University Costa Rica',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white70,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Developed by Sander Garita',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.white38,
+                          fontStyle: FontStyle.italic,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'MIT License 2025',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Colors.white24,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

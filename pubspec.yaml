@@ -42,6 +42,9 @@ dependencies:
   google_fonts: ^6.2.1
   just_audio: ^0.9.36
   youtube_player_flutter: ^9.1.1 # Added YouTube player
+  youtube_player_iframe: ^5.2.1
+  flutter_native_splash: ^2.4.6
+  video_player: ^2.9.5
 
 dev_dependencies:
   flutter_test:
@@ -69,6 +72,7 @@ flutter:
   assets:
     - assets/fonts/
     - assets/audio/
+    - assets/images/ttu.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

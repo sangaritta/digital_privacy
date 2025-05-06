@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'dart:async'; // For StreamSubscription
-import 'package:flutter/foundation.dart' show kDebugMode; // Explicitly import kDebugMode
+import 'package:flutter/foundation.dart'
+    show kDebugMode; // Explicitly import kDebugMode
 
 // Helper class to store quiz data
 class QuizQuestion {
@@ -9,25 +10,27 @@ class QuizQuestion {
   final List<String> options;
   final int correctIndex;
 
-  QuizQuestion({required this.question, required this.options, required this.correctIndex});
+  QuizQuestion({
+    required this.question,
+    required this.options,
+    required this.correctIndex,
+  });
 }
 
 class StudentScreen extends StatefulWidget {
   final String sessionId;
   final String? studentId;
 
-  const StudentScreen({
-    super.key,
-    required this.sessionId,
-    this.studentId,
-  });
+  const StudentScreen({super.key, required this.sessionId, this.studentId});
 
   @override
   State<StudentScreen> createState() => _StudentScreenState();
 }
 
 class _StudentScreenState extends State<StudentScreen> {
-  final DatabaseReference _sessionRef = FirebaseDatabase.instance.ref("sessions");
+  final DatabaseReference _sessionRef = FirebaseDatabase.instance.ref(
+    "sessions",
+  );
   StreamSubscription? _stepListener;
   int _currentStep = 0;
   bool _isLoading = true;
@@ -42,65 +45,94 @@ class _StudentScreenState extends State<StudentScreen> {
 
   final List<QuizQuestion> _quizQuestions = [
     QuizQuestion(
-      question: "According to Zuboff (2019), what is the primary goal of Surveillance Capitalism?",
+      question:
+          "According to Zuboff (2019), what is the primary goal of Surveillance Capitalism?",
       options: [
         "A) To provide free internet access to everyone.",
         "B) To enhance user privacy through encryption.",
         "C) To collect personal data for predicting behavior and generating profit.",
-        "D) To regulate online content more effectively."
+        "D) To regulate online content more effectively.",
       ],
       correctIndex: 2,
     ),
     QuizQuestion(
-      question: "What did Gurses & Del Alamo (2016) describe as consent fatigue?",
+      question:
+          "What did Gurses & Del Alamo (2016) describe as consent fatigue?",
       options: [
         "A) The physical tiredness from using digital devices too long.",
         "B) Users agreeing to terms without understanding due to being overwhelmed by requests.",
         "C) A feeling of satisfaction after carefully reading privacy policies.",
-        "D) The legal requirement for platforms to get consent multiple times."
+        "D) The legal requirement for platforms to get consent multiple times.",
       ],
       correctIndex: 1,
     ),
     QuizQuestion(
-      question: "What does Apples App Tracking Transparency (ATT) primarily aim to do?",
+      question:
+          "What does Apples App Tracking Transparency (ATT) primarily aim to do?",
       options: [
         "A) Block all advertisements within apps.",
         "B) Require user consent before apps can track activity across other apps/websites.",
         "C) Automatically encrypt all data stored on the device.",
-        "D) Increase the speed of app performance."
+        "D) Increase the speed of app performance.",
       ],
       correctIndex: 1,
     ),
     QuizQuestion(
-      question: "Why can Internet Service Providers (ISPs) pose a significant privacy risk according to the research?",
+      question:
+          "Why can Internet Service Providers (ISPs) pose a significant privacy risk according to the research?",
       options: [
         "A) They manufacture the devices people use.",
         "B) They can see unencrypted traffic, DNS lookups, and potentially sell browsing data.",
         "C) They primarily rely on selling hardware for profit.",
-        "D) They are required by law to delete all user logs daily."
+        "D) They are required by law to delete all user logs daily.",
       ],
       correctIndex: 1,
     ),
     QuizQuestion(
-      question: "What technology saw a 417% usage increase since 2019, indicating growing public concern about data handling?",
+      question:
+          "What technology saw a 417% usage increase since 2019, indicating growing public concern about data handling?",
       options: [
         "A) Social Media Platforms",
         "B) Smart Home Devices",
         "C) Virtual Private Networks (VPNs)",
-        "D) Email Services"
+        "D) Email Services",
       ],
       correctIndex: 2,
-    )
+    ),
   ];
 
-  final List<Color> _kahootColors = [Colors.red, Colors.blue, Colors.orange, Colors.green];
-  final List<IconData> _kahootIcons = [Icons.change_history, Icons.diamond_outlined, Icons.circle_outlined, Icons.square_outlined];
-  final Map<int, IconData> _stepIcons = {0: Icons.waving_hand, 1: Icons.warning_amber_rounded, 2: Icons.lightbulb_outline, 3: Icons.campaign_outlined, 4: Icons.question_answer_outlined, 5: Icons.fingerprint, 6: Icons.router_outlined, 7: Icons.shield_outlined, 8: Icons.vpn_key_outlined, 9: Icons.error_outline};
+  final List<Color> _kahootColors = [
+    Colors.red,
+    Colors.blue,
+    Colors.orange,
+    Colors.green,
+  ];
+  final List<IconData> _kahootIcons = [
+    Icons.change_history,
+    Icons.diamond_outlined,
+    Icons.circle_outlined,
+    Icons.square_outlined,
+  ];
+  final Map<int, IconData> _stepIcons = {
+    0: Icons.waving_hand,
+    1: Icons.warning_amber_rounded,
+    2: Icons.lightbulb_outline,
+    3: Icons.campaign_outlined,
+    4: Icons.question_answer_outlined,
+    5: Icons.fingerprint,
+    6: Icons.router_outlined,
+    7: Icons.shield_outlined,
+    8: Icons.vpn_key_outlined,
+    9: Icons.error_outline,
+  };
 
   @override
   void initState() {
     super.initState();
-    _studentId = widget.studentId ?? FirebaseDatabase.instance.ref().push().key ?? "unknown_student_${DateTime.now().millisecondsSinceEpoch}";
+    _studentId =
+        widget.studentId ??
+        FirebaseDatabase.instance.ref().push().key ??
+        "unknown_student_${DateTime.now().millisecondsSinceEpoch}";
     _selectedAnswers = List<int?>.filled(_quizQuestions.length, null);
     _listenForCurrentStep();
   }
@@ -115,42 +147,50 @@ class _StudentScreenState extends State<StudentScreen> {
   // Restored _listenForCurrentStep with updated reset logic
   void _listenForCurrentStep() {
     final stepRef = _sessionRef.child(widget.sessionId).child("currentStep");
-    _stepListener = stepRef.onValue.listen((DatabaseEvent event) {
-      final step = event.snapshot.value;
-      if (mounted) {
-        int previousStep = _currentStep; // Store previous step before updating
-        setState(() {
-          _currentStep = (step is int) ? step : 0;
-          _isLoading = false;
+    _stepListener = stepRef.onValue.listen(
+      (DatabaseEvent event) {
+        final step = event.snapshot.value;
+        if (mounted) {
+          int previousStep =
+              _currentStep; // Store previous step before updating
+          setState(() {
+            _currentStep = (step is int) ? step : 0;
+            _isLoading = false;
 
-          // Reset quiz ONLY if moving away from step 11 (results) or backwards from step 10/11
-          if ((previousStep == 11 && _currentStep != 11) || 
-              (_currentStep < 10 && (previousStep == 10 || previousStep == 11))) {
-            _quizSubmitted = false;
-            _currentQuizQuestionIndex = 0;
-            _selectedAnswers = List<int?>.filled(_quizQuestions.length, null);
-            _quizScore = 0;
-            if (_quizPageController.hasClients) {
-              _quizPageController.jumpToPage(0);
+            // Reset quiz ONLY if moving away from step 11 (results) or backwards from step 10/11
+            if ((previousStep == 11 && _currentStep != 11) ||
+                (_currentStep < 10 &&
+                    (previousStep == 10 || previousStep == 11))) {
+              _quizSubmitted = false;
+              _currentQuizQuestionIndex = 0;
+              _selectedAnswers = List<int?>.filled(_quizQuestions.length, null);
+              _quizScore = 0;
+              if (_quizPageController.hasClients) {
+                _quizPageController.jumpToPage(0);
+              }
             }
-          }
-        });
-      }
-    }, onError: (error) {
-      if (kDebugMode) print("Error listening to current step: $error");
-      if (mounted) setState(() => _isLoading = false);
-    });
+          });
+        }
+      },
+      onError: (error) {
+        if (kDebugMode) print("Error listening to current step: $error");
+        if (mounted) setState(() => _isLoading = false);
+      },
+    );
   }
 
   // Restored _submitAnswer
   void _submitAnswer(int questionIndex, int answerIndex) {
-    final answerRef = _sessionRef.child(widget.sessionId).child("quizAnswers").child("q_$questionIndex").child(_studentId);
-    answerRef.set({
-      "answerIndex": answerIndex,
-      "timestamp": ServerValue.timestamp,
-    }).catchError((error) {
-      print("Error submitting answer: $error");
-    });
+    final answerRef = _sessionRef
+        .child(widget.sessionId)
+        .child("quizAnswers")
+        .child("q_$questionIndex")
+        .child(_studentId);
+    answerRef
+        .set({"answerIndex": answerIndex, "timestamp": ServerValue.timestamp})
+        .catchError((error) {
+          //print("Error submitting answer: $error");
+        });
   }
 
   // Renamed and restored _calculateFinalScore
@@ -163,7 +203,7 @@ class _StudentScreenState extends State<StudentScreen> {
     }
     // Mark submitted locally JUST BEFORE showing results on step 11
     // Do not call setState here as build method for step 11 handles it
-    _quizSubmitted = true; 
+    _quizSubmitted = true;
   }
 
   // Restored _buildStepContent with Case 11
@@ -171,19 +211,72 @@ class _StudentScreenState extends State<StudentScreen> {
     IconData? stepIcon = _stepIcons[step];
 
     switch (step) {
-      case 0: return _StepContentWidget(icon: stepIcon, title: "Welcome!", body: "Waiting for the presentation to begin...");
-      case 1: return _StepContentWidget(icon: stepIcon, title: "The Challenge: Consent Fatigue", body: "Users are often overwhelmed with information, leading to consent fatigue where they click through without understanding (Gurses & Del Alamo, 2016).");
-      case 2: return _StepContentWidget(icon: stepIcon, title: "Our Solution: Guided Interaction", body: "This app uses interactive elements, progressive disclosure, and personalized feedback to make privacy concepts accessible and engaging, addressing common usability hurdles (Consumer Reports, 2024).");
-      case 3: return _StepContentWidget(icon: stepIcon, title: "Making it Persuasive: Rhetoric", body: "We do not just inform; we persuade using rhetoric. This helps conceptualize abstract data practices, not just learn facts (Zuboff, 2019).");
-      case 4: return _StepContentWidget(icon: stepIcon, title: "Technique 1: Stories & Questions", body: "Relatable anecdotes of privacy issues create emotional connection (Chen et al., 2024). Rhetorical questions like Who has your location? prompt reflection.");
-      case 5: return _StepContentWidget(icon: stepIcon, title: "Technique 2: Metaphors & Slogans", body: "Complex ideas are simplified with metaphors like data collection as being followed. Catchy phrases act as memorable anchors.");
-      case 6: return _StepContentWidget(icon: stepIcon, title: "The Quiz: More Than Just Testing", body: "The quiz reinforces learning, provides feedback, and encourages reflection on how privacy applies personally, disrupting the architecture of vulnerability (Solove, 2008).");
-      case 7: return _StepContentWidget(icon: stepIcon, title: "Visual Language: Design Matters", body: "The visual design uses color like trustworthy blues and warning reds, and clear information structure to guide you and reinforce the message.");
-      case 8: return _StepContentWidget(icon: stepIcon, title: "Visual Language: Making Data Clear", body: "Abstract stats become understandable. For example, showing the 417% increase in VPN use (GlobalWebIndex, 2024) visually makes the trend obvious.");
-      case 9: return _StepContentWidget(icon: stepIcon, title: "Wrap Up & Questions", body: "We have covered the key aspects of using interactive and rhetorical techniques for privacy education. Time for questions!");
-      case 10: return _buildQuizWidget(); // Show quiz questions/buttons
-      case 11: return _buildQuizResultsScreen(); // Show results
-      default: return Center(child: Text("Waiting for content (Step: $step)..."));
+      case 0:
+        return _StepContentWidget(
+          icon: stepIcon,
+          title: "Welcome!",
+          body: "Waiting for the presentation to begin...",
+        );
+      case 1:
+        return _StepContentWidget(
+          icon: stepIcon,
+          title: "The Challenge: Consent Fatigue",
+          body: "Users are often overwhelmed with information, leading to consent fatigue where they click through without understanding (Gurses & Del Alamo, 2016).",
+        );
+      case 2:
+        return _StepContentWidget(
+          icon: stepIcon,
+          title: "Surveillance Capitalism: Your Life as Profit",
+          body: "Our clicks, searches, and locations are systematically collected and turned into profit. Professor Zuboff calls this Surveillance Capitalism. Companies use our data for targeting and profit.",
+        );
+      case 3:
+        return _StepContentWidget(
+          icon: stepIcon,
+          title: "Real World Impact: Cambridge Analytica",
+          body: "The Cambridge Analytica scandal showed how billions of data points can be used to predict and influence behavior. Social media companies profit from our data.",
+        );
+      case 4:
+        return _StepContentWidget(
+          icon: stepIcon,
+          title: "Rhetoric: Making the Invisible Visible",
+          body: "Would you want a stranger following you all day, recording everything? That is similar to what happens online. Mental models help us understand the stakes.",
+        );
+      case 5:
+        return _StepContentWidget(
+          icon: stepIcon,
+          title: "Your Phone: A Powerful Data Sensor",
+          body: "Your phone is a collection of sensors. Many apps request permissions they do not need. Is that flashlight app really needing your contacts?",
+        );
+      case 6:
+        return _StepContentWidget(
+          icon: stepIcon,
+          title: "ISPs: Gatekeepers Watching Your Traffic",
+          body: "Internet providers can monitor your browsing and monetize your data. Some offer discounts in exchange for tracking. Is privacy becoming a luxury?",
+        );
+      case 7:
+        return _StepContentWidget(
+          icon: stepIcon,
+          title: "Taking Control: Knowledge + Action",
+          body: "The goal is empowerment, not fear. We cannot just log off, but we can be more informed and intentional. The quiz will reinforce key ideas.",
+        );
+      case 8:
+        return _StepContentWidget(
+          icon: stepIcon,
+          title: "Tools for Privacy: VPNs & Secure Apps",
+          body: "VPN usage has surged. A VPN encrypts your traffic and masks your location. Use reputable services and privacy-respecting browsers and messengers.",
+        );
+      case 9:
+        return _StepContentWidget(
+          icon: stepIcon,
+          title: "Human Error & Mindfulness",
+          body: "Most breaches involve human error. Use strong passwords, be mindful before clicking, and review your privacy settings regularly.",
+        );
+      case 10:
+        return _buildQuizWidget(); // Show quiz questions/buttons
+      case 11:
+        return _buildQuizResultsScreen(); // Show results
+      default:
+        return Center(child: Text("Waiting for content (Step: $step)..."));
     }
   }
 
@@ -197,7 +290,9 @@ class _StudentScreenState extends State<StudentScreen> {
             controller: _quizPageController,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _quizQuestions.length,
-            onPageChanged: (index) { setState(() => _currentQuizQuestionIndex = index); },
+            onPageChanged: (index) {
+              setState(() => _currentQuizQuestionIndex = index);
+            },
             itemBuilder: (context, index) {
               final questionData = _quizQuestions[index];
               final String questionText = questionData.question;
@@ -209,34 +304,72 @@ class _StudentScreenState extends State<StudentScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text("Question ${index + 1} of ${_quizQuestions.length}", style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
+                    Text(
+                      "Question ${index + 1} of ${_quizQuestions.length}",
+                      style: Theme.of(context).textTheme.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 15),
-                    Text(questionText, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w500), textAlign: TextAlign.center),
+                    Text(
+                      questionText,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 35),
                     GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: options.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2, childAspectRatio: 2.5, crossAxisSpacing: 15, mainAxisSpacing: 15,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 2.5,
+                            crossAxisSpacing: 15,
+                            mainAxisSpacing: 15,
+                          ),
                       itemBuilder: (context, optionIndex) {
-                        bool isSelected = _selectedAnswers[index] == optionIndex;
-                        Color buttonColor = _kahootColors[optionIndex % _kahootColors.length];
-                        IconData buttonIcon = _kahootIcons[optionIndex % _kahootIcons.length];
+                        bool isSelected =
+                            _selectedAnswers[index] == optionIndex;
+                        Color buttonColor =
+                            _kahootColors[optionIndex % _kahootColors.length];
+                        IconData buttonIcon =
+                            _kahootIcons[optionIndex % _kahootIcons.length];
 
                         return ElevatedButton.icon(
                           icon: Icon(buttonIcon, color: Colors.white),
-                          label: Text(options[optionIndex], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14), textAlign: TextAlign.center),
+                          label: Text(
+                            options[optionIndex],
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: buttonColor,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            side: isSelected ? const BorderSide(color: Colors.white, width: 3) : null,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            side:
+                                isSelected
+                                    ? const BorderSide(
+                                      color: Colors.white,
+                                      width: 3,
+                                    )
+                                    : null,
                             elevation: isSelected ? 8 : 2,
                           ),
                           onPressed: () {
-                            setState(() { _selectedAnswers[index] = optionIndex; });
+                            setState(() {
+                              _selectedAnswers[index] = optionIndex;
+                            });
                             _submitAnswer(index, optionIndex);
                           },
                         );
@@ -257,25 +390,37 @@ class _StudentScreenState extends State<StudentScreen> {
                 ElevatedButton.icon(
                   icon: const Icon(Icons.arrow_forward_ios),
                   label: const Text("Next Question"),
-                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12)),
-                  onPressed: _selectedAnswers[_currentQuizQuestionIndex] == null ? null : () {
-                    _quizPageController.nextPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                    );
-                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 30,
+                      vertical: 12,
+                    ),
+                  ),
+                  onPressed:
+                      _selectedAnswers[_currentQuizQuestionIndex] == null
+                          ? null
+                          : () {
+                            _quizPageController.nextPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeOut,
+                            );
+                          },
                   iconAlignment: IconAlignment.end,
                 )
               else // On the last question
-                 Padding( // Add padding to show instruction
-                   padding: const EdgeInsets.symmetric(vertical: 16.0),
-                   child: Text(
-                     _selectedAnswers[_currentQuizQuestionIndex] == null 
-                       ? "Select your answer."
-                       : "Waiting for admin to show results...", 
-                     style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey.shade400)
-                   ),
-                 )
+                Padding(
+                  // Add padding to show instruction
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Text(
+                    _selectedAnswers[_currentQuizQuestionIndex] == null
+                        ? "Select your answer."
+                        : "Waiting for admin to show results...",
+                    style: TextStyle(
+                      fontStyle: FontStyle.italic,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -285,22 +430,61 @@ class _StudentScreenState extends State<StudentScreen> {
 
   // Restored _buildQuizResultsScreen
   Widget _buildQuizResultsScreen() {
-    // Calculate score only when showing results for the first time
     if (!_quizSubmitted) {
-       _calculateFinalScore(); 
+      _calculateFinalScore();
     }
-     
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text("Quiz Complete!", style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 20),
-        Text("Your Score: $_quizScore / ${_quizQuestions.length}",
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: _quizScore >= (_quizQuestions.length / 2) ? Colors.greenAccent : Colors.orangeAccent)
-        ),
-        const SizedBox(height: 30),
-        const Text("Waiting for presentation to conclude...", style: TextStyle(fontStyle: FontStyle.italic)),
-      ],
+    // Show each question, student's answer, and highlight correct answer
+    return ListView.builder(
+      itemCount: _quizQuestions.length,
+      itemBuilder: (context, index) {
+        final question = _quizQuestions[index];
+        final selected = _selectedAnswers[index];
+        final isCorrect = selected == question.correctIndex;
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Question ${index + 1}: ${question.question}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                ...List.generate(question.options.length, (optIdx) {
+                  final isStudentAnswer = selected == optIdx;
+                  final isValid = question.correctIndex == optIdx;
+                  return Container(
+                    margin: const EdgeInsets.symmetric(vertical: 2),
+                    decoration: BoxDecoration(
+                      color: isValid
+                        ? Colors.green.withOpacity(0.2)
+                        : isStudentAnswer
+                          ? Colors.orange.withOpacity(0.2)
+                          : null,
+                      borderRadius: BorderRadius.circular(6),
+                      border: isValid
+                        ? Border.all(color: Colors.green, width: 2)
+                        : isStudentAnswer
+                          ? Border.all(color: Colors.orange, width: 2)
+                          : null,
+                    ),
+                    child: ListTile(
+                      title: Text(question.options[optIdx]),
+                      leading: isValid
+                        ? const Icon(Icons.check, color: Colors.green)
+                        : isStudentAnswer
+                          ? const Icon(Icons.close, color: Colors.orange)
+                          : null,
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -311,19 +495,20 @@ class _StudentScreenState extends State<StudentScreen> {
         title: Text("Session: ${widget.sessionId}"),
         automaticallyImplyLeading: false,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              transitionBuilder: (Widget child, Animation<double> animation) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-              child: Container(
-                key: ValueKey<int>(_currentStep),
-                alignment: Alignment.center,
-                child: _buildStepContent(_currentStep),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : AnimatedSwitcher(
+                duration: const Duration(milliseconds: 400),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+                child: Container(
+                  key: ValueKey<int>(_currentStep),
+                  alignment: Alignment.center,
+                  child: _buildStepContent(_currentStep),
+                ),
               ),
-            ),
     );
   }
 }
@@ -353,11 +538,17 @@ class _StepContentWidget extends StatelessWidget {
           if (icon != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 20.0),
-              child: Icon(icon, size: 60, color: Theme.of(context).colorScheme.secondary),
+              child: Icon(
+                icon,
+                size: 60,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
             ),
           Text(
             title,
-            style: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),

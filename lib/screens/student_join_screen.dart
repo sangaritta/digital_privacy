@@ -63,7 +63,8 @@ class _StudentJoinScreenState extends State<StudentJoinScreen> {
     }
 
     // 2. Add student to the session (using push for unique ID)
-    final studentRef = sessionRef.child('students').push(); // Generate unique ID
+    final studentRef =
+        sessionRef.child('students').push(); // Generate unique ID
     final studentId = studentRef.key; // Get the generated key
 
     if (studentId == null) {
@@ -91,10 +92,13 @@ class _StudentJoinScreenState extends State<StudentJoinScreen> {
       // 5. Navigate to the StudentScreen for the joined session
       if (mounted) {
         // Pass student info via 'extra' in case StudentScreen needs it later
-        context.go('/student/$sessionId', extra: { 'studentId': studentId, 'nickname': nickname });
+        context.go(
+          '/student/$sessionId',
+          extra: {'studentId': studentId, 'nickname': nickname},
+        );
       }
     } catch (e) {
-      print("Error joining session: $e");
+      //print("Error joining session: $e");
       if (mounted) {
         setState(() {
           _errorMessage = 'An error occurred while joining. Please try again.';
@@ -109,7 +113,9 @@ class _StudentJoinScreenState extends State<StudentJoinScreen> {
   // This runs once when the student joins. The listener keeps running
   // in the background managed by the Firebase SDK.
   void _setupPresence(String sessionId, String studentId) {
-    final studentStatusRef = FirebaseDatabase.instance.ref('sessions/$sessionId/students/$studentId/isOnline');
+    final studentStatusRef = FirebaseDatabase.instance.ref(
+      'sessions/$sessionId/students/$studentId/isOnline',
+    );
     final connectedRef = FirebaseDatabase.instance.ref('.info/connected');
 
     // Use a listener to handle initial connection and reconnections
@@ -130,13 +136,13 @@ class _StudentJoinScreenState extends State<StudentJoinScreen> {
     // if there's a chance this screen persists or user navigates back.
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Join Session')),
       body: Center(
-        child: SingleChildScrollView( // Prevents overflow on smaller screens
+        child: SingleChildScrollView(
+          // Prevents overflow on smaller screens
           padding: const EdgeInsets.all(30.0),
           child: Form(
             key: _formKey,
@@ -175,14 +181,15 @@ class _StudentJoinScreenState extends State<StudentJoinScreen> {
                     counterText: "", // Hide the default counter
                   ),
                   maxLength: 8, // Enforce length
-                  textCapitalization: TextCapitalization.characters, // Help with uppercase
+                  textCapitalization:
+                      TextCapitalization.characters, // Help with uppercase
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter the session code';
                     }
                     final trimmedValue = value.trim();
                     if (trimmedValue.length != 8) {
-                     return 'Code must be exactly 8 characters';
+                      return 'Code must be exactly 8 characters';
                     }
                     // Basic hex check (allows 0-9, A-F, a-f)
                     if (!RegExp(r'^[a-fA-F0-9]{8}$').hasMatch(trimmedValue)) {
@@ -198,18 +205,25 @@ class _StudentJoinScreenState extends State<StudentJoinScreen> {
                     padding: const EdgeInsets.only(bottom: 15.0),
                     child: Text(
                       _errorMessage!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
-                 // Show loading indicator or join button
-                 _isJoining
-                  ? const CircularProgressIndicator()
-                  : ElevatedButton(
-                    onPressed: _joinSession,
-                    style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15)),
-                    child: const Text('Join', style: TextStyle(fontSize: 16)),
-                ),
+                // Show loading indicator or join button
+                _isJoining
+                    ? const CircularProgressIndicator()
+                    : ElevatedButton(
+                      onPressed: _joinSession,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 15,
+                        ),
+                      ),
+                      child: const Text('Join', style: TextStyle(fontSize: 16)),
+                    ),
               ],
             ),
           ),

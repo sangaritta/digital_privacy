@@ -7,10 +7,12 @@ class AdminSessionSelectionScreen extends StatefulWidget {
   const AdminSessionSelectionScreen({super.key});
 
   @override
-  State<AdminSessionSelectionScreen> createState() => _AdminSessionSelectionScreenState();
+  State<AdminSessionSelectionScreen> createState() =>
+      _AdminSessionSelectionScreenState();
 }
 
-class _AdminSessionSelectionScreenState extends State<AdminSessionSelectionScreen> {
+class _AdminSessionSelectionScreenState
+    extends State<AdminSessionSelectionScreen> {
   final _sessionCodeController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   String? _errorMessage;
@@ -51,7 +53,7 @@ class _AdminSessionSelectionScreenState extends State<AdminSessionSelectionScree
         context.go('/admin/$sessionId');
       }
     } catch (e) {
-      print("Error checking session: $e");
+      //print("Error checking session: $e");
       if (mounted) {
         setState(() {
           _errorMessage = 'An error occurred while checking the session.';
@@ -123,18 +125,25 @@ class _AdminSessionSelectionScreenState extends State<AdminSessionSelectionScree
                     padding: const EdgeInsets.only(bottom: 15.0),
                     child: Text(
                       _errorMessage!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
                 _isLoading
                     ? const CircularProgressIndicator()
                     : ElevatedButton.icon(
-                        icon: const Icon(Icons.arrow_forward),
-                        label: const Text('Go to Session'),
-                        onPressed: _goToSession,
-                        style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15)),
+                      icon: const Icon(Icons.arrow_forward),
+                      label: const Text('Go to Session'),
+                      onPressed: _goToSession,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 30,
+                          vertical: 15,
+                        ),
                       ),
+                    ),
               ],
             ),
           ),
